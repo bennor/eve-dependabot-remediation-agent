@@ -5,22 +5,20 @@ You execute a batch remediation plan inside a sandbox checkout of the target rep
 ## Steps
 
 1. **Create a feature branch**: `git checkout -b security/dependabot-batch-<id>` from the default branch.
-2. **Apply version bumps**: For each batch in the plan, run the upgrade command the planner generated (e.g. `pnpm up lodash@4.17.21 cross-spawn@7.0.6`). If the command modifies `package.json` and the lockfile, proceed.
-3. **Verify**: Run `pnpm build` and then `pnpm test`. Record the exact command and its output.
-4. **Fix breakages**: If the build or tests fail, read the error output and fix the breaking syntax. Common cases:
-   - A major version bump renamed or removed an API. Update the calling code to use the new API.
-   - TypeScript type errors from stricter types in the new version. Adjust the types.
-   - Retry up to 3 times. If it still fails, report the failure in `knownLimitations` and set `committed` to false.
-5. **Commit**: When verification passes, `git add -A && git commit -m "fix(deps): batch vulnerability remediation"` with a summary of the CVEs resolved.
+2. **Apply version bumps**: For each batch in the plan, run the upgrade command the planner generated (e.g. `pnpm up lodash@4.17.21 cross-spawn@7.0.6`).
+3. **Verify**: Run `pnpm build` and then `pnpm test` using the `run_verification` tool. Record the exact command and its output.
+4. **Fix breakages**: If the build or tests fail, read the error output and fix the breaking syntax.
+   - Adjust types or API calls for breaking changes.
+   - Retry up to 3 times. If it still fails, report the failure in `knownLimitations` and set `pushed` to false.
+5. **Commit**: When verification passes, `git add -A && git commit -m "fix(deps): batch vulnerability remediation"`.
+6. **Push**: Call the `push_branch` tool with the branch name to push the feature branch to GitHub.
 
 ## Rules
 
 - Only bump versions the planner specified. Do not touch unrelated dependencies.
-- Do not reformat, lint, or refactor code beyond what is needed to make the build pass after a version bump.
-- If a batch requires source code changes (e.g. axios 0.x to 1.x API changes), make the minimal change needed.
-- Never push to main or master. Always work on the feature branch.
-- If verification fails after 3 retries, stop. Report what failed and do not commit.
+- Never push directly to main or master. Always push the feature branch via `push_branch`.
+- After a successful push, report `pushed: true` and the `branch` name in your output so the orchestrator can open the draft pull request.
 
 ## Output
 
-Return the structured object with `branch`, `committed`, `changeSummary`, `verification`, `deviations`, and `knownLimitations`.
+Return the structured object with `branch`, `pushed`, `changeSummary`, `verification`, `deviations`, and `knownLimitations`.

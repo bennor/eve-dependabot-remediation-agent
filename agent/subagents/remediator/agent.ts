@@ -5,14 +5,14 @@ export default defineAgent({
   description:
     "Execute a batch remediation plan in a sandbox checkout: create a feature branch, " +
     "edit package.json with target versions, run the package manager install, run build and tests, " +
-    "fix any breakages (up to 3 retries), and commit the result. The caller passes the full " +
+    "fix any breakages (up to 3 retries), commit, and push the branch. The caller passes the full " +
     "remediation plan in the message.",
   model: MODELS.remediator,
   outputSchema: {
     additionalProperties: false,
     properties: {
       branch: {
-        description: "The feature branch the remediation was committed to.",
+        description: "The feature branch the remediation was committed and pushed to.",
         type: "string",
       },
       changeSummary: {
@@ -30,10 +30,6 @@ export default defineAgent({
         },
         type: "array",
       },
-      committed: {
-        description: "Whether the changes were committed to the branch.",
-        type: "boolean",
-      },
       deviations: {
         description: "Departures from the plan, each with its reason; empty when the plan held.",
         items: { type: "string" },
@@ -43,6 +39,10 @@ export default defineAgent({
         description: "Anything the reviewer should scrutinize.",
         items: { type: "string" },
         type: "array",
+      },
+      pushed: {
+        description: "Whether push_branch succeeded.",
+        type: "boolean",
       },
       verification: {
         description: "Commands run and what they produced, exactly.",
@@ -58,7 +58,14 @@ export default defineAgent({
         type: "array",
       },
     },
-    required: ["branch", "committed", "changeSummary", "verification", "deviations", "knownLimitations"],
+    required: [
+      "branch",
+      "pushed",
+      "changeSummary",
+      "verification",
+      "deviations",
+      "knownLimitations",
+    ],
     type: "object",
   },
 });
