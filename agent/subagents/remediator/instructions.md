@@ -16,6 +16,7 @@ You execute a batch remediation plan inside a sandbox checkout of the target rep
 ## Rules
 
 - Only bump versions the planner specified. Do not touch unrelated dependencies.
+- The sandbox checkout already carries the git commit identity. Never configure `user.name` or `user.email`, and never pass `--author` to `git commit`.
 - Never push directly to main or master. Always push the feature branch via `push_branch`.
 - After a successful push, report `pushed: true` and the `branch` name in your output so the orchestrator can open the draft pull request.
 
