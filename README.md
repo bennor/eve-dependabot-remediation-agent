@@ -4,36 +4,36 @@ An Eve agent that takes Dependabot vulnerability alerts, plans batch upgrades, v
 
 ## How it works
 
-The agent coordinates three stations to turn thread or prompt context into verified draft pull requests:
+The root agent receives work from GitHub and coordinates three subagents. Scanner, Planner, and Remediator form the logical processing flow, but they do not communicate directly. The root agent invokes each one and passes its structured result into the next stage.
 
-```
-[ GitHub Issue / PR Thread / Prompt ]
+```text
+GitHub issue / PR thread / prompt
                  │
+                 │ via Vercel Connect
                  ▼
-     ┌───────────────────────┐
-     │    Scanner Station    │  Interprets context and validates package.json
-     └───────────┬───────────┘
-                 │
-                 ▼
-     ┌───────────────────────┐
-     │    Planner Station    │  Groups updates into batch vs sequential upgrades
-     └───────────┬───────────┘
-                 │
-                 ▼
-     ┌───────────────────────┐
-     │   Remediator Station  │  Applies bumps, runs build/tests, and pushes branch
-     └───────────┬───────────┘
-                 │
-                 ▼
-     ┌───────────────────────┐
-     │    Draft Pull Req     │  Orchestrator opens draft PR via Vercel Connect
-     └───────────────────────┘
+┌──────────────────────────── ROOT AGENT ────────────────────────────┐
+│                                                                   │
+│  Receives source context and coordinates the complete workflow    │
+│                                                                   │
+│  ┌──────────────┐      ┌──────────────┐      ┌────────────────┐   │
+│  │   Scanner    │ ───> │   Planner    │ ───> │   Remediator   │   │
+│  │   subagent   │      │   subagent   │      │    subagent    │   │
+│  └──────────────┘      └──────────────┘      └────────────────┘   │
+│                                                                   │
+│  Each subagent returns structured output to the root agent        │
+│  before the root agent invokes the next stage.                    │
+│                                                                   │
+└─────────────────────────────────┬─────────────────────────────────┘
+                                  │
+                                  ▼
+                    Verified draft pull request
 ```
 
-1. **Repository scanning**: The [`scanner`](agent/subagents/scanner/) subagent receives the complete source context and interprets the requested packages. It then inspects `package.json` in its sandbox, checks current versions, confirms presence in `dependencies` or `devDependencies`, and drops packages that are already updated or not installed. If no package target is found, the pipeline stops.
-2. **Batch planning**: The [`planner`](agent/subagents/planner/) subagent evaluates the scanner's verified packages. Independent patch and minor updates are grouped into a single batch transaction. Major version bumps with potential breaking API changes are isolated into sequential batches. The planner generates concise, package-based branch names (e.g. `security/lodash-4.17.21-cross-spawn-7.0.6`).
-3. **Remediation and verification**: The [`remediator`](agent/subagents/remediator/) subagent creates the feature branch, applies version bumps, and runs [`run_verification`](agent/subagents/remediator/tools/run_verification.ts) to execute `pnpm build` and `pnpm test`. If type errors or breaking changes occur, the remediator attempts targeted repairs (up to 3 retries). Once clean, it commits with a verified bot identity from [`agent/sandbox.ts`](agent/sandbox.ts) and calls [`push_branch`](agent/subagents/remediator/tools/push_branch.ts).
-4. **Draft delivery**: The orchestrator in [`agent/instructions.ts`](agent/instructions.ts) opens a draft pull request via [`github__createPullRequest`](agent/extensions/github.ts). Draft pull requests open autonomously via `createPullRequestPolicy`, delivering the finished PR without getting stuck in approval loops.
+1. **Root coordination**: The root agent follows [`agent/instructions.ts`](agent/instructions.ts). It passes the complete issue, pull request thread, or prompt to Scanner, receives the validated package list, passes that list to Planner, then sends Planner's remediation batches to Remediator.
+2. **Repository scanning**: The [`scanner`](agent/subagents/scanner/) subagent interprets the requested packages from the source context. It inspects `package.json` in the shared sandbox, checks current versions, confirms where each package is declared, and drops packages that are already updated or not installed. If no actionable target is found, its structured result tells the root agent to stop.
+3. **Batch planning**: The [`planner`](agent/subagents/planner/) subagent receives Scanner's `validPackages` output from the root agent. It groups independent patch and minor updates into a batch, isolates potentially breaking major updates, and generates concise package-based branch names such as `security/lodash-4.17.21-cross-spawn-7.0.6`.
+4. **Remediation and verification**: The [`remediator`](agent/subagents/remediator/) subagent receives Planner's batches from the root agent. It creates the feature branch, applies version bumps, and uses [`run_verification`](agent/subagents/remediator/tools/run_verification.ts) to run `pnpm build` and `pnpm test`. It attempts targeted repairs when an upgrade breaks the build, then commits with the bot identity configured by [`agent/sandbox.ts`](agent/sandbox.ts) and calls [`push_branch`](agent/subagents/remediator/tools/push_branch.ts).
+5. **Draft delivery**: Remediator returns its branch and verification results to the root agent. The root agent opens a draft pull request through [`github__createPullRequest`](agent/extensions/github.ts). `createPullRequestPolicy` allows verified draft pull requests to open autonomously while non-draft changes remain approval-gated.
 
 ## GitHub intake and interaction
 
