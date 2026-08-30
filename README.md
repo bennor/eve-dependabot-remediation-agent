@@ -35,6 +35,30 @@ The agent coordinates three stations to turn Dependabot alerts into verified dra
 3. **Remediation and verification**: The [`remediator`](agent/subagents/remediator/) subagent creates the feature branch, applies version bumps, and runs [`run_verification`](agent/subagents/remediator/tools/run_verification.ts) to execute `pnpm build` and `pnpm test`. If type errors or breaking changes occur, the remediator attempts targeted repairs (up to 3 retries). Once clean, it commits with a verified bot identity from [`agent/sandbox.ts`](agent/sandbox.ts) and calls [`push_branch`](agent/subagents/remediator/tools/push_branch.ts).
 4. **Draft delivery**: The orchestrator in [`agent/instructions.ts`](agent/instructions.ts) opens a draft pull request via [`github__createPullRequest`](agent/extensions/github.ts). Draft pull requests open autonomously via `createPullRequestPolicy`, delivering the finished PR without getting stuck in approval loops.
 
+## GitHub intake and interaction
+
+The agent connects to GitHub through Vercel Connect and the Eve GitHub channel ([`agent/channels/github.ts`](agent/channels/github.ts)).
+
+### How work is triggered
+
+- **Issue or pull request mentions**: Mentioning the bot handle (e.g. `@dependabot-agent please fix` or `@dependabot-agent remediate`) on an issue or pull request starts an interactive session. The channel ignores bot comments and checks for collaborator permissions before dispatching.
+- **Automated Dependabot triage**: When Dependabot opens or reopens a security pull request, the channel intercepts the webhook, checks whether the vulnerable symbol is reachable from repository code, and posts an evidence-backed recommendation comment directly on the pull request.
+- **Local development TUI**: Running `pnpm dev` launches an interactive terminal session where you can paste alert payloads or trigger remediation runs against a local checkout.
+
+### Raising pull requests and comments
+
+- **Branch pushes**: The remediator station pushes feature branches directly from the sandbox to the target repository using [`push_branch`](agent/subagents/remediator/tools/push_branch.ts), with credentials brokered through Vercel Connect.
+- **Pull request creation**: The orchestrator opens the draft pull request using [`github__createPullRequest`](agent/extensions/github.ts). The pull request body contains the full remediation log, including resolved CVE identifiers, version changes, and test verification output.
+- **Progress updates**: The orchestrator posts progress notes and triage results using `github__addIssueComment` and `github__addPullRequestComment`.
+
+### Approval and human-in-the-loop gates
+
+Tool policies are defined in [`agent/extensions/github.ts`](agent/extensions/github.ts):
+
+- **Draft pull requests**: `createPullRequest` checks the `draft` parameter. Setting `draft: true` marks the action as `not-applicable` for approval, allowing the agent to deliver draft pull requests autonomously.
+- **Publishing and updates**: Non-draft pull requests or updates that change pull request status require explicit human approval (`user-approval`). Eve pauses the session and renders an approval prompt on the originating thread, waiting for a maintainer to reply before executing.
+- **Comments and triage**: Progress comments and label applications run without approval (`never`), keeping the issue thread updated as stations complete.
+
 ## Repository layout
 
 - [`agent/agent.ts`](agent/agent.ts): Root orchestrator model and session token budget.
