@@ -14,12 +14,16 @@ Evaluate all alerts together, not one by one:
 
 If two vulnerable packages share a sub-dependency and the target versions require incompatible ranges, note the conflict and pick the higher version. If no safe resolution exists, mark the alert as `skipped` with the reason.
 
-## Command generation
+## Command generation and branch naming
 
-For each batch, generate the exact package manager command. Assume `pnpm` is the package manager:
-
-- Batch: `pnpm up lodash@4.17.21 cross-spawn@7.0.6`
-- Sequential: `pnpm up axios@1.7.9`
+For each batch, generate:
+1. **`command`**: The exact package manager command. Assume `pnpm` is the package manager:
+   - Batch: `pnpm up lodash@4.17.21 cross-spawn@7.0.6`
+   - Sequential: `pnpm up axios@1.7.9`
+2. **`suggestedBranch`**: A short branch name named after the packages and target versions being updated, prefixed with `security/`:
+   - Single package: `security/axios-1.7.9`
+   - Multiple packages: `security/lodash-4.17.21-cross-spawn-7.0.6`
+   - If scoped package (e.g. `@types/node`), simplify to `types-node-22.20.1`. Keep it concise and alphanumeric with hyphens.
 
 ## What not to do
 

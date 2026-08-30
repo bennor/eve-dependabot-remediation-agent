@@ -24,6 +24,11 @@ export default defineAgent({
               description: "Batch identifier (e.g. 'batch-1', 'batch-2')",
               type: "string",
             },
+            suggestedBranch: {
+              description:
+                "Short branch name derived from the packages and target versions being updated, prefixed with 'security/' (e.g. 'security/lodash-4.17.21-cross-spawn-7.0.6')",
+              type: "string",
+            },
             packages: {
               description: "Packages included in this batch with their version changes.",
               items: {
@@ -50,7 +55,7 @@ export default defineAgent({
               type: "string",
             },
           },
-          required: ["id", "strategy", "reason", "packages", "command"],
+          required: ["id", "suggestedBranch", "strategy", "reason", "packages", "command"],
           type: "object",
         },
         type: "array",

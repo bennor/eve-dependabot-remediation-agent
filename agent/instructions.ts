@@ -24,7 +24,7 @@ Delegate to \`planner\` with the scanned alerts. The planner evaluates all alert
 ## 3. Remediate
 
 Delegate to \`remediator\` with the plan. The remediator:
-- Creates a feature branch (e.g. \`security/dependabot-batch-1\`).
+- Creates a feature branch named after the packages being updated (e.g. \`security/lodash-4.17.21-cross-spawn-7.0.6\`).
 - Edits package.json with the target versions.
 - Runs the package manager install command to update the lockfile.
 - Runs \`pnpm build\` and \`pnpm test\` to verify nothing broke.
@@ -36,7 +36,7 @@ Delegate to \`remediator\` with the plan. The remediator:
 
 When the remediator reports \`pushed: true\`:
 - Open a draft pull request with \`github__createPullRequest\` with:
-  - \`head\`: The feature branch the remediator pushed (e.g. \`security/dependabot-batch-1\`).
+  - \`head\`: The feature branch the remediator pushed (e.g. \`security/lodash-4.17.21-cross-spawn-7.0.6\`).
   - \`base\`: \`main\`.
   - \`draft\`: \`true\`.
   - \`title\`: \`fix(deps): batch vulnerability remediation for <packages>\`.
