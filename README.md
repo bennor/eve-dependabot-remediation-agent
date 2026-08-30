@@ -62,7 +62,7 @@ Tool policies are defined in [`agent/extensions/github.ts`](agent/extensions/git
 ## Repository layout
 
 - [`agent/agent.ts`](agent/agent.ts): Root orchestrator model and session token budget.
-- [`agent/instructions.ts`](agent/instructions.ts): System prompt defining the extract, scan, plan, remediate, and deliver pipeline.
+- [`agent/instructions.ts`](agent/instructions.ts): System prompt defining the scan, plan, remediate, and deliver pipeline.
 - [`agent/sandbox.ts`](agent/sandbox.ts): Sandbox definition with git safe directory and bot commit identity.
 - [`agent/channels/`](agent/channels/): Inbound channels for local dev (`eve.ts`) and GitHub webhooks (`github.ts`).
 - [`agent/extensions/github.ts`](agent/extensions/github.ts): GitHub tool extensions with custom approval policies.
