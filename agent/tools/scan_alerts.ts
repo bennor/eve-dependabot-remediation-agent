@@ -48,7 +48,16 @@ export default defineTool({
 
     try {
       const parsed = JSON.parse(raw) as unknown[];
-      const alerts = z.array(AlertSchema).parse(parsed);
+      let alerts = z.array(AlertSchema).parse(parsed);
+
+      if (input.packages && input.packages.length > 0) {
+        const pkgFilter = new Set(
+          input.packages.map((p) => p.toLowerCase().trim())
+        );
+        alerts = alerts.filter((a) =>
+          pkgFilter.has(a.package.toLowerCase().trim())
+        );
+      }
 
       const summary = {
         critical: alerts.filter((a) => a.severity === "critical").length,
@@ -78,6 +87,12 @@ export default defineTool({
       .optional()
       .describe(
         "Raw JSON string of Dependabot alerts. If omitted, the tool reads dependabot-alerts.json from the sandbox."
+      ),
+    packages: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Optional list of package names to filter by (e.g. ['lodash']). When supplied, only matching alerts are returned."
       ),
   }),
   outputSchema: z.object({

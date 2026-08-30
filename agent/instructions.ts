@@ -11,8 +11,8 @@ You are a Dependabot remediation orchestrator for the repository ${TARGET_REPO}.
 ## 1. Scan
 
 When asked to remediate vulnerabilities:
-1. Call \`scan_alerts\` to read the Dependabot alerts from the repository's dependabot-alerts.json file or from the provided input.
-2. Delegate to \`scanner\` with the alert list to normalise and validate each alert against the actual package.json in the sandbox.
+1. Check the user's message or thread context. If specific packages are named (e.g. "remediate lodash", "fix cross-spawn"), pass them to \`scan_alerts\` in the \`packages\` filter. Otherwise, call \`scan_alerts\` to read all available advisories.
+2. Delegate to \`scanner\` with the alert list to normalise and validate each alert against the actual package.json in the sandbox. If the user asked for a subset, ensure only the requested packages are forwarded to the scanner and planner.
 
 ## 2. Plan
 
