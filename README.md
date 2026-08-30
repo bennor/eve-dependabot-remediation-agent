@@ -4,19 +4,14 @@ An Eve agent that takes Dependabot vulnerability alerts, plans batch upgrades, v
 
 ## How it works
 
-The agent coordinates a target extraction tool and three stations to turn thread or prompt context into verified draft pull requests:
+The agent coordinates three stations to turn thread or prompt context into verified draft pull requests:
 
 ```
 [ GitHub Issue / PR Thread / Prompt ]
                  │
                  ▼
      ┌───────────────────────┐
-     │   extract_packages    │  Pure text parser: extracts targets & versions
-     └───────────┬───────────┘  (no sandbox or repository access)
-                 │
-                 ▼
-     ┌───────────────────────┐
-     │    Scanner Station    │  Validates targets against package.json in sandbox
+     │    Scanner Station    │  Interprets context and validates package.json
      └───────────┬───────────┘
                  │
                  ▼
@@ -35,11 +30,10 @@ The agent coordinates a target extraction tool and three stations to turn thread
      └───────────────────────┘
 ```
 
-1. **Target extraction**: The [`extract_packages`](agent/tools/extract_packages.ts) tool parses the issue title, description, or comment (e.g. `Bump lodash from 4.17.20 to 4.17.21` or `@dependabot-agent fix lodash`). It performs pure text analysis without touching the repository files. If no package targets are found, the agent stops immediately and asks for clarification.
-2. **Repository scanning**: The [`scanner`](agent/subagents/scanner/) subagent receives the extracted targets and inspects the repository's `package.json` in the sandbox. It checks current versions, confirms presence in `dependencies` or `devDependencies`, and drops any packages that are already updated or not installed.
-3. **Batch planning**: The [`planner`](agent/subagents/planner/) subagent evaluates the verified packages. Independent patch and minor updates are grouped into a single batch transaction. Major version bumps with potential breaking API changes are isolated into sequential batches. The planner generates concise, package-based branch names (e.g. `security/lodash-4.17.21-cross-spawn-7.0.6`).
-4. **Remediation and verification**: The [`remediator`](agent/subagents/remediator/) subagent creates the feature branch, applies version bumps, and runs [`run_verification`](agent/subagents/remediator/tools/run_verification.ts) to execute `pnpm build` and `pnpm test`. If type errors or breaking changes occur, the remediator attempts targeted repairs (up to 3 retries). Once clean, it commits with a verified bot identity from [`agent/sandbox.ts`](agent/sandbox.ts) and calls [`push_branch`](agent/subagents/remediator/tools/push_branch.ts).
-5. **Draft delivery**: The orchestrator in [`agent/instructions.ts`](agent/instructions.ts) opens a draft pull request via [`github__createPullRequest`](agent/extensions/github.ts). Draft pull requests open autonomously via `createPullRequestPolicy`, delivering the finished PR without getting stuck in approval loops.
+1. **Repository scanning**: The [`scanner`](agent/subagents/scanner/) subagent receives the complete source context and interprets the requested packages. It then inspects `package.json` in its sandbox, checks current versions, confirms presence in `dependencies` or `devDependencies`, and drops packages that are already updated or not installed. If no package target is found, the pipeline stops.
+2. **Batch planning**: The [`planner`](agent/subagents/planner/) subagent evaluates the scanner's verified packages. Independent patch and minor updates are grouped into a single batch transaction. Major version bumps with potential breaking API changes are isolated into sequential batches. The planner generates concise, package-based branch names (e.g. `security/lodash-4.17.21-cross-spawn-7.0.6`).
+3. **Remediation and verification**: The [`remediator`](agent/subagents/remediator/) subagent creates the feature branch, applies version bumps, and runs [`run_verification`](agent/subagents/remediator/tools/run_verification.ts) to execute `pnpm build` and `pnpm test`. If type errors or breaking changes occur, the remediator attempts targeted repairs (up to 3 retries). Once clean, it commits with a verified bot identity from [`agent/sandbox.ts`](agent/sandbox.ts) and calls [`push_branch`](agent/subagents/remediator/tools/push_branch.ts).
+4. **Draft delivery**: The orchestrator in [`agent/instructions.ts`](agent/instructions.ts) opens a draft pull request via [`github__createPullRequest`](agent/extensions/github.ts). Draft pull requests open autonomously via `createPullRequestPolicy`, delivering the finished PR without getting stuck in approval loops.
 
 ## GitHub intake and interaction
 
@@ -72,7 +66,6 @@ Tool policies are defined in [`agent/extensions/github.ts`](agent/extensions/git
 - [`agent/sandbox.ts`](agent/sandbox.ts): Sandbox definition with git safe directory and bot commit identity.
 - [`agent/channels/`](agent/channels/): Inbound channels for local dev (`eve.ts`) and GitHub webhooks (`github.ts`).
 - [`agent/extensions/github.ts`](agent/extensions/github.ts): GitHub tool extensions with custom approval policies.
-- [`agent/tools/extract_packages.ts`](agent/tools/extract_packages.ts): Pure text analysis tool for extracting package update targets from prompts and threads.
 - [`agent/subagents/`](agent/subagents/): Specialist stations (`scanner`, `planner`, `remediator`).
 
 ## Setup

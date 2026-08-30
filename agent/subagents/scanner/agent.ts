@@ -3,14 +3,34 @@ import { MODELS } from "../../lib/models.js";
 
 export default defineAgent({
   description:
-    "Inspect the repository in the sandbox to validate extracted package update requests against package.json. " +
-    "Discovers currently installed versions, checks for presence in dependencies or devDependencies, " +
-    "and separates actionable package updates from stale, missing, or already-updated packages. " +
-    "The caller passes the extracted package list from extract_packages in the message.",
+    "Interpret the incoming GitHub issue, pull request, or prompt and inspect the repository in the sandbox. " +
+    "Extract package update requests from the source context, validate them against package.json, discover " +
+    "current versions, and separate actionable updates from ambiguous, stale, missing, or already-updated packages.",
   model: MODELS.scanner,
   outputSchema: {
     additionalProperties: false,
     properties: {
+      ambiguities: {
+        description: "Source-context details that are too ambiguous to turn into a safe package update request.",
+        items: { type: "string" },
+        type: "array",
+      },
+      requestedPackages: {
+        description: "Package requests interpreted from the source context, with evidence from that context.",
+        items: {
+          additionalProperties: false,
+          properties: {
+            advisoryIds: { items: { type: "string" }, type: "array" },
+            currentVersionHint: { type: "string" },
+            evidence: { type: "string" },
+            name: { type: "string" },
+            targetVersionHint: { type: "string" },
+          },
+          required: ["name", "evidence"],
+          type: "object",
+        },
+        type: "array",
+      },
       skippedPackages: {
         description: "Packages that cannot or should not be updated, with an explicit reason.",
         items: {
@@ -88,7 +108,13 @@ export default defineAgent({
         type: "array",
       },
     },
-    required: ["validPackages", "skippedPackages", "summary"],
+    required: [
+      "requestedPackages",
+      "validPackages",
+      "skippedPackages",
+      "ambiguities",
+      "summary",
+    ],
     type: "object",
   },
 });

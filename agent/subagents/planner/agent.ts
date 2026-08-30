@@ -6,7 +6,7 @@ export default defineAgent({
     "Plan batch dependency upgrades from scanner-verified package updates. " +
     "Groups patch and minor updates into batch transactions, isolates major version bumps, " +
     "and generates upgrade commands and concise package-based branch names. " +
-    "The caller passes the valid packages from the scanner in the message.",
+    "The planner does not inspect or modify the repository. The caller passes the valid packages from the scanner in the message.",
   model: MODELS.planner,
   outputSchema: {
     additionalProperties: false,
