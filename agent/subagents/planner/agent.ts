@@ -3,10 +3,10 @@ import { MODELS } from "../../lib/models.js";
 
 export default defineAgent({
   description:
-    "Plan batch dependency upgrades from validated Dependabot alerts. " +
+    "Plan batch dependency upgrades from scanner-verified package updates. " +
     "Groups patch and minor updates into batch transactions, isolates major version bumps, " +
-    "and resolves dependency conflicts. Returns an ordered remediation plan with upgrade commands. " +
-    "The caller passes the valid alerts in the message.",
+    "and generates upgrade commands and concise package-based branch names. " +
+    "The caller passes the valid packages from the scanner in the message.",
   model: MODELS.planner,
   outputSchema: {
     additionalProperties: false,
@@ -24,52 +24,40 @@ export default defineAgent({
               description: "Batch identifier (e.g. 'batch-1', 'batch-2')",
               type: "string",
             },
-            suggestedBranch: {
-              description:
-                "Short branch name derived from the packages and target versions being updated, prefixed with 'security/' (e.g. 'security/lodash-4.17.21-cross-spawn-7.0.6')",
-              type: "string",
-            },
             packages: {
               description: "Packages included in this batch with their version changes.",
               items: {
                 additionalProperties: false,
                 properties: {
+                  advisoryIds: {
+                    items: { type: "string" },
+                    type: "array",
+                  },
                   breaking: { type: "boolean" },
-                  cve: { type: "string" },
                   from: { type: "string" },
-                  package: { type: "string" },
-                  severity: { enum: ["critical", "high", "medium", "low"], type: "string" },
+                  name: { type: "string" },
                   to: { type: "string" },
                 },
-                required: ["package", "from", "to", "cve", "severity", "breaking"],
+                required: ["name", "from", "to", "breaking"],
                 type: "object",
               },
               type: "array",
             },
             reason: {
-              description: "Why these packages are grouped together (e.g. 'independent patch updates, no shared deps')",
+              description: "Why these packages are grouped together (e.g. 'independent patch/minor updates')",
               type: "string",
             },
             strategy: {
               enum: ["batch", "sequential"],
               type: "string",
             },
+            suggestedBranch: {
+              description:
+                "Short branch name derived from the packages and target versions being updated, prefixed with 'security/' (e.g. 'security/lodash-4.17.21-cross-spawn-7.0.6')",
+              type: "string",
+            },
           },
           required: ["id", "suggestedBranch", "strategy", "reason", "packages", "command"],
-          type: "object",
-        },
-        type: "array",
-      },
-      skipped: {
-        description: "Alerts that cannot be safely remediated automatically, with a reason.",
-        items: {
-          additionalProperties: false,
-          properties: {
-            cve: { type: "string" },
-            package: { type: "string" },
-            reason: { type: "string" },
-          },
-          required: ["package", "cve", "reason"],
           type: "object",
         },
         type: "array",
@@ -79,7 +67,7 @@ export default defineAgent({
         type: "string",
       },
     },
-    required: ["batches", "skipped", "summary"],
+    required: ["batches", "summary"],
     type: "object",
   },
 });

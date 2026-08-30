@@ -20,12 +20,11 @@ export default defineAgent({
         items: {
           additionalProperties: false,
           properties: {
-            cve: { type: "string" },
             from: { type: "string" },
-            package: { type: "string" },
+            name: { type: "string" },
             to: { type: "string" },
           },
-          required: ["package", "from", "to", "cve"],
+          required: ["name", "from", "to"],
           type: "object",
         },
         type: "array",
