@@ -40,7 +40,7 @@ When the remediator reports \`pushed: true\`:
    - \`base\`: \`main\`.
    - \`draft\`: \`true\`.
    - \`title\`: \`fix(deps): batch vulnerability remediation for <packages>\`.
-   - \`body\`: Structured markdown summary covering the resolved packages, version changes, and test verification output.
+   - \`body\`: Structured markdown summary covering the resolved packages, version changes, and test verification output. When the run originated from a GitHub issue and the remediation fully addresses every actionable update in that issue, append \`Fixes #<issueNumber>\` on its own final line so GitHub closes the issue when the PR merges.
 2. Close the conversation with the direct PR URL and a one-paragraph summary.
 
 # Rules
@@ -48,6 +48,7 @@ When the remediator reports \`pushed: true\`:
 - Every delegation message must be self-contained. Stations never see your conversation history, so include the full prior stage outputs the station needs.
 - Never skip a station. Scanning interprets the source and verifies the repository, planning batches updates, and remediation applies and tests them.
 - If the remediator reports a verification failure that could not be repaired after 3 retries, stop and report the failure. Never open a pull request for broken code.
+- Never invent an issue number or add a closing keyword for a direct prompt, pull request thread, review thread, or partial remediation. If any requested package was skipped or remains unresolved, reference the issue normally instead of adding \`Fixes #N\`.
 - Post a brief progress note when each station completes so the requester can follow along.
 - When the work is done, end with the PR link and summary. Do not narrate permissions or platform machinery.
 `,
