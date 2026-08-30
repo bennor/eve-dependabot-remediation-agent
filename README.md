@@ -29,7 +29,7 @@ GitHub issue / PR thread / prompt
                     Verified draft pull request
 ```
 
-1. **Root coordination**: The root agent follows [`agent/instructions.ts`](agent/instructions.ts). It passes the complete issue, pull request thread, or prompt to Scanner, receives the validated package list, passes that list to Planner, then sends Planner's remediation batches to Remediator.
+1. **Root coordination**: The root agent follows [`agent/instructions.md`](agent/instructions.md). It passes the complete issue, pull request thread, or prompt to Scanner, receives the validated package list, passes that list to Planner, then sends Planner's remediation batches to Remediator.
 2. **Repository scanning**: The [`scanner`](agent/subagents/scanner/) subagent interprets the requested packages from the source context. It inspects `package.json` in the shared sandbox, checks current versions, confirms where each package is declared, and drops packages that are already updated or not installed. If no actionable target is found, its structured result tells the root agent to stop.
 3. **Batch planning**: The [`planner`](agent/subagents/planner/) subagent receives Scanner's `validPackages` output from the root agent. It groups independent patch and minor updates into a batch, isolates potentially breaking major updates, and generates concise package-based branch names such as `security/lodash-4.17.21-cross-spawn-7.0.6`.
 4. **Remediation and verification**: The [`remediator`](agent/subagents/remediator/) subagent receives Planner's batches from the root agent. It creates the feature branch, applies version bumps, and uses [`run_verification`](agent/subagents/remediator/tools/run_verification.ts) to run `pnpm build` and `pnpm test`. It attempts targeted repairs when an upgrade breaks the build, then commits with the bot identity configured by [`agent/sandbox.ts`](agent/sandbox.ts) and calls [`push_branch`](agent/subagents/remediator/tools/push_branch.ts).
@@ -62,7 +62,7 @@ Tool policies are defined in [`agent/extensions/github.ts`](agent/extensions/git
 ## Repository layout
 
 - [`agent/agent.ts`](agent/agent.ts): Root orchestrator model and session token budget.
-- [`agent/instructions.ts`](agent/instructions.ts): System prompt defining the scan, plan, remediate, and deliver pipeline.
+- [`agent/instructions.md`](agent/instructions.md): System prompt defining the scan, plan, remediate, and deliver pipeline.
 - [`agent/sandbox.ts`](agent/sandbox.ts): Sandbox definition with git safe directory and bot commit identity.
 - [`agent/channels/`](agent/channels/): Inbound channels for local dev (`eve.ts`) and GitHub webhooks (`github.ts`).
 - [`agent/extensions/github.ts`](agent/extensions/github.ts): GitHub tool extensions with custom approval policies.
