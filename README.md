@@ -89,3 +89,18 @@ pnpm dev       # run local interactive dev session
 pnpm validate  # run TypeScript check and discovery diagnostics
 eve deploy     # deploy to Vercel production
 ```
+
+## Supporting multiple repositories
+
+This deployment supports one repository, configured through `TARGET_REPO`. The GitHub channel checks out the repository and ref from each webhook into `/workspace`, but two outbound paths still use `TARGET_REPO`: the default GitHub tool context in [`agent/extensions/github.ts`](agent/extensions/github.ts) and the remote URL used by [`push_branch`](agent/subagents/remediator/tools/push_branch.ts).
+
+Supporting multiple repositories safely requires a few changes:
+
+1. **Create trusted repository context for each session.** Derive `{ owner, repo, ref, defaultBranch }` from authenticated GitHub webhook metadata. Local and API-triggered sessions should select an explicit repository from an allowlist. Issue text and model output must never decide the destination repository.
+2. **Use the same context for every repository operation.** Resolve the GitHub extension context per session, or require `owner` and `repo` on every GitHub tool call and validate them against the session. Pass this context to `push_branch` rather than building its remote URL from `TARGET_REPO`.
+3. **Resolve credentials for the selected repository.** Confirm that the GitHub App or Vercel Connect installation can access the repository. Where repositories use different installations or connectors, select the connector from trusted session context before reading, pushing, commenting, or opening a pull request.
+4. **Keep each checkout isolated.** Use one repository per sandbox session. Before remediation or push, confirm that `/workspace` and its Git remote match the session context. The scanner, planner, remediator, and pull request creation steps must all stay with that repository.
+5. **Configure policy per repository.** Replace `TARGET_REPO` with an allowlisted repository catalogue that defines the default branch, allowed branch prefix, package manager, install command, and verification commands. The current workflow assumes a `main` branch, `package.json`, pnpm, `pnpm build`, and `pnpm test`.
+6. **Carry repository identity through the workflow and test it.** Include the resolved repository in every self-contained subagent delegation and structured result. Add routing tests to prove that work triggered in repository A cannot read, push, comment on, or open a pull request in repository B, including when sessions run concurrently.
+
+[`agent/instructions.md`](agent/instructions.md) can remain repository-neutral. Repository identity belongs in trusted runtime context that tools validate and use for authorisation.
